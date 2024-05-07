@@ -70,6 +70,22 @@ func OptionBinding(req BindingRequest) Option {
 	}
 }
 
+// OptionWithQoS sets the Quality of Service (QoS) for the RMQ server.
+func OptionWithGlobalQoS(prefetchCount int, prefetchSize int) Option {
+	return func(sf *signalFlow[any]) error {
+
+		sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+			err := channel.Qos(prefetchCount, prefetchSize, true)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+		return nil
+	}
+}
+
 // OptionWithQueueName sets the queue name for the signal flow client. If the queue name exists, the signal flow creates a consumer for the queue.
 // The ForeachN function will be callable.
 func OptionWithQueueName(v string) Option {
@@ -118,6 +134,13 @@ func OptionWithCodec(c Codec) Option {
 func OptionWithRoutingKey(v string) Option {
 	return func(sf *signalFlow[any]) error {
 		sf.config.routingKey = v
+		return nil
+	}
+}
+
+func OptionWithErrorHandler(fn func(error)) Option {
+	return func(sf *signalFlow[any]) error {
+		sf.config.errorHandler = fn
 		return nil
 	}
 }
