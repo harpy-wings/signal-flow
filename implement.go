@@ -12,22 +12,29 @@ import (
 )
 
 type signalFlow[Message any] struct {
-	sync.Mutex
 	logger logrus.FieldLogger
 	codec  Codec
 
 	amqConn *amqp.Connection
 
-	RXC       <-chan amqp.Delivery
+	// rxc is the internal queue for handling the messages, created since RMQ RXC will lock the goroutines if the connection close unexpected.
+	rxc chan amqp.Delivery
+	// RXC       <-chan amqp.Delivery
+
 	amqRXChan *amqp.Channel
 	rxFlow    struct {
+		lock          sync.Mutex
 		channelClosed chan *amqp.Error
 	}
 
 	TXC       chan amqp.Delivery
 	amqTXChan *amqp.Channel
 	txFlow    struct {
+		lock          sync.Mutex
 		channelClosed chan *amqp.Error
+		returnError   chan *amqp.Error
+
+		notifyFlow chan bool
 	}
 
 	amqConnNotifyBlocked chan amqp.Blocking
@@ -38,21 +45,22 @@ type signalFlow[Message any] struct {
 	amqConnAttempts     int
 
 	config struct {
-		host                  string                 // RMQ host.
-		name                  string                 // Name of the consumer. By default, a random number with "sg_" prefix.
-		queueName             string                 // Queue name for the consumer to consume messages.
-		exchangeName          string                 // Exchange name where the producer will push messages.
-		routingKey            string                 // Routing key for the producer to emit messages into the exchange.
-		exclusive             bool                   // Whether the consumer should be exclusive or not. Default is false.
-		flowControlBufferSize int                    // Buffer size of channel for flow control purposes. Default is 1.
-		amqAttemptsLimit      int                    // Attempts limit for retrying.
-		priority              uint8                  // Default is 0; range is 0 to 9.
-		mandatory             bool                   // Default is false.
-		immediate             bool                   // Default is false.
-		args                  map[string]interface{} // Default arguments passed to RMQ server in every request.
-		errorHandler          func(error)            // Function called to handle asynchronous errors.
-
-		onConnectionStabilized []func(channel *amqp.Channel) error
+		host                      string                 // RMQ host.
+		name                      string                 // Name of the consumer. By default, a random number with "sg_" prefix.
+		queueName                 string                 // Queue name for the consumer to consume messages.
+		exchangeName              string                 // Exchange name where the producer will push messages.
+		routingKey                string                 // Routing key for the producer to emit messages into the exchange.
+		exclusive                 bool                   // Whether the consumer should be exclusive or not. Default is false.
+		flowControlBufferSize     int                    // Buffer size of channel for flow control purposes. Default is 1.
+		amqAttemptsLimit          int                    // Attempts limit for retrying.
+		priority                  uint8                  // Default is 0; range is 0 to 9.
+		mandatory                 bool                   // Default is false.
+		immediate                 bool                   // Default is false.
+		args                      map[string]interface{} // Default arguments passed to RMQ server in every request.
+		errorHandler              func(error)            // Function called to handle asynchronous errors.
+		numberOfGoRoutinesForeach int
+		onConnectionStabilized    []func(channel *amqp.Channel) error
+		ackTimeout                time.Duration
 	}
 }
 
@@ -88,7 +96,6 @@ func (f *signalFlow[Message]) setDefaults() {
 		defaultLogger.SetLevel(logrus.DebugLevel)
 		f.logger = defaultLogger
 	}
-
 	f.config.errorHandler = func(err error) {
 		f.logger.Error(err)
 	}
@@ -113,7 +120,10 @@ func (f *signalFlow[Message]) init() error {
 				return err
 			}
 		}
-		C.Close()
+		// err = C.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	if f.config.queueName != "" {
@@ -135,41 +145,41 @@ func (f *signalFlow[Message]) init() error {
 }
 
 // ForeachN is bounded parallelism pattern, it executes the `fn` function for each message in `n` goroutines. Acks the RMQ if and only if the `fn` returns nil.
-func (f *signalFlow[Message]) ForeachN(fn func(Message) error, n int) error {
+func (f *signalFlow[Message]) Foreach(fn func(Message) error) error {
 	// Preconditions
-	if f.RXC == nil {
+	if f.rxc == nil {
 		return ErrNilChannel
 	}
 
 	// create the goroutines
-	for i := 0; i < n; i++ {
-		go func() {
-			for {
-				// once the channel is closed the for range will break the look, so we keep this loop with the hope of connection retries.
-				for msg := range f.RXC {
-					err := f.handleDeliveredMsg(fn, msg)
-					if err != nil {
-						f.config.errorHandler(err)
-					}
-				}
-				time.Sleep(time.Second)
+	go func() {
+		for msg := range f.rxc {
+			err := f.handleDeliveredMsg(fn, msg)
+			if err != nil {
+				f.config.errorHandler(err)
 			}
-		}()
-	}
+		}
+	}()
 
 	return nil
 }
 
 // Emit is sending the message to all registered exchanges. if it fails to send the message, will return an error. Otherwise it will return nil.
 func (f *signalFlow[Message]) Emit(msg Message) error {
+	return f.EmitR(msg, f.config.routingKey)
+}
+
+// Emit is sending the message to all registered exchanges. if it fails to send the message, will return an error. Otherwise it will return nil.
+func (f *signalFlow[Message]) EmitR(msg Message, routingKey string) error {
 	bs, err := f.codec.Encode(msg)
 	if err != nil {
 		return err
 	}
 	//todo add attempts pattern for Emit
+	f.txFlow.lock.Lock()
 	err = f.amqTXChan.Publish(
 		f.config.exchangeName,
-		f.config.routingKey,
+		routingKey,
 		f.config.mandatory,
 		f.config.immediate,
 		amqp.Publishing{
@@ -180,6 +190,7 @@ func (f *signalFlow[Message]) Emit(msg Message) error {
 			Headers:     f.config.args,
 		},
 	)
+	f.txFlow.lock.Unlock()
 	if err != nil {
 		return err
 	}
@@ -194,7 +205,6 @@ func (f *signalFlow[Message]) handleDeliveredMsg(fn func(Message) error, msg amq
 	if err != nil {
 		return err
 	}
-
 	// process the message
 	err = fn(Msg)
 	if err != nil {
@@ -202,10 +212,13 @@ func (f *signalFlow[Message]) handleDeliveredMsg(fn func(Message) error, msg amq
 	}
 
 	// Send Ack
-	err = msg.Ack(true)
-	if err != nil {
-		return err
-	}
+	go func() {
+		err := msg.Ack(true)
+		if err != nil {
+			f.config.errorHandler(err)
+		}
+	}()
+
 	return nil
 }
 
@@ -227,8 +240,6 @@ func (f *signalFlow[Message]) connect() error {
 	}
 	f.amqConnAttempts = 0
 
-	f.Lock()
-	defer f.Unlock()
 	f.amqConnNotifyBlocked = f.amqConn.NotifyBlocked(make(chan amqp.Blocking, f.config.flowControlBufferSize))
 	f.amqConnNotifyClose = f.amqConn.NotifyClose(make(chan *amqp.Error, f.config.flowControlBufferSize))
 
@@ -272,7 +283,7 @@ func (f *signalFlow[Message]) channelNotifyClosed(c chan *amqp.Error, recoverFn 
 		// skip and close the thread
 		return
 	}
-	f.logger.Warnf("notification received since channel closed: %s; retrieving the RX channel", e.Error())
+	f.logger.Warnf("notification received since channel closed: %s; retrieving the channel", e.Error())
 	err := recoverFn()
 	if err != nil {
 		// unexpected case, maybe the RMQ broker is down for long time.
@@ -284,7 +295,13 @@ func (f *signalFlow[Message]) channelNotifyClosed(c chan *amqp.Error, recoverFn 
 // consume starts consuming from the queue
 // if the connection is closed, it retires f.config.amqAttemptsLimits and then return the error.
 func (f *signalFlow[Message]) consume() error {
+	f.rxFlow.lock.TryLock() // avoid message acknowledgement process.
 	var err error
+
+	if f.rxc == nil {
+		f.rxc = make(chan amqp.Delivery)
+	}
+
 	if f.amqConn.IsClosed() {
 		time.Sleep(time.Duration(f.amqConsumeAttempts) * time.Second)
 		f.amqConsumeAttempts++
@@ -293,20 +310,24 @@ func (f *signalFlow[Message]) consume() error {
 		}
 		return f.consume()
 	}
-	f.Lock()
-	defer f.Unlock()
+
 	f.amqConsumeAttempts = 0
 
 	f.amqRXChan, err = f.amqConn.Channel()
 	if err != nil {
 		return err
 	}
-	f.rxFlow.channelClosed = f.amqRXChan.NotifyClose(make(chan *amqp.Error, f.config.flowControlBufferSize))
-	defer func() { go f.channelNotifyClosed(f.rxFlow.channelClosed, f.consume) }()
-	f.RXC, err = f.amqRXChan.Consume(f.config.queueName, f.config.name, false, f.config.exclusive, false, false, f.config.args)
+	f.rxFlow.lock.Unlock()
+
+	RXC, err := f.amqRXChan.Consume(f.config.queueName, f.config.name, false, f.config.exclusive, false, false, f.config.args)
 	if err != nil {
 		return err
 	}
+	f.rxFlow.channelClosed = f.amqRXChan.NotifyClose(make(chan *amqp.Error, f.config.flowControlBufferSize))
+
+	go f.channelNotifyClosed(f.rxFlow.channelClosed, f.consume)
+	// f.rxFlow.chanForeachNRecover <- struct{}{} //
+	go f.rxcProxy(RXC)
 
 	f.logger.Infof("%s consumer stabilized for queue %s.", f.config.name, f.config.queueName)
 	return nil
@@ -322,20 +343,42 @@ func (f *signalFlow[Message]) initProducer() error {
 		}
 		return f.initProducer()
 	}
-	f.Lock()
-	defer f.Unlock()
+
 	f.amqProducerAttempts = 0
 
 	f.amqTXChan, err = f.amqConn.Channel()
 	if err != nil {
 		return err
 	}
-	// handle channel notify close
-	f.txFlow.channelClosed = f.amqTXChan.NotifyClose(make(chan *amqp.Error, f.config.flowControlBufferSize))
-	defer func() { go f.channelNotifyClosed(f.txFlow.channelClosed, f.initProducer) }()
-
 	// f.amqTXChan.NotifyReturn()
 
+	// handle channel notify close
+	f.txFlow.channelClosed = f.amqTXChan.NotifyClose(make(chan *amqp.Error, f.config.flowControlBufferSize))
+	go f.channelNotifyClosed(f.txFlow.channelClosed, f.initProducer)
+
+	f.txFlow.notifyFlow = f.amqTXChan.NotifyFlow(make(chan bool, f.config.flowControlBufferSize))
+	go f.channelTXNotifyFlowHandler()
 	f.logger.Infof("%s producer stabilized for exchange %s.", f.config.name, f.config.exchangeName)
 	return nil
+}
+
+func (f *signalFlow[Message]) channelTXNotifyFlowHandler() {
+	for flowSignal := range f.txFlow.notifyFlow {
+		if flowSignal {
+			f.logger.Infof("signal flow producer got pause command from RMQ server")
+			f.txFlow.lock.Lock()
+		} else {
+			f.logger.Infof("signal flow producer got continue command from RMQ server")
+			f.txFlow.lock.Unlock()
+		}
+	}
+}
+
+func (f *signalFlow[Message]) rxcProxy(RXC <-chan amqp.Delivery) {
+	// start proxy consumer
+	f.logger.Debugf("Proxy consumer started")
+	for msg := range RXC {
+		f.rxc <- msg
+	}
+	f.logger.Debugf("Proxy consumer ended")
 }
