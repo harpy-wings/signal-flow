@@ -40,7 +40,6 @@ func TestMain(m *testing.M) {
 	}
 	defer docker.Close()
 	var containerID string
-	containerID = "e2030bd36b2b6fac250d0990b419a47bfe5f98d64fab68748cfec98b85004e70"
 	if containerID == "" {
 		// setup the RMQ container
 
