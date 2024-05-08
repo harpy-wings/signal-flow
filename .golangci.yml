@@ -1,0 +1,69 @@
+run:
+  tests: true
+  timeout: 10m
+  sort-results: true
+  allow-parallel-runners: true
+  exclude-dir: test/testutils
+  concurrency: 4
+
+linters:
+  # disable-all: true
+  # Enable specific linter
+  # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
+  enable:
+  #   - asciicheck
+  #   - bidichk
+  #   - depguard
+  #   - durationcheck
+  #   - errcheck
+  #   - errname
+  #   - exportloopref
+  #   - forcetypeassert
+  #   - goconst
+    - gofmt
+    # - goimports
+    - goheader
+  #   - gomodguard
+  #   - goprintffuncname
+  #   - gosimple
+  #   - govet
+  #   - importas
+  #   - ineffassign
+  #   - makezero
+  #   - misspell
+  #   - nakedret
+  #   - nilnil
+  #   - promlinter
+  #   - staticcheck
+  #   - stylecheck
+  #   - tenv
+  #   - testpackage
+  #   - typecheck
+  #   - unconvert
+  #   - unused
+  #   - whitespace
+  #   - dogsled
+  #   - gocritic
+  #   - gofumpt
+  #   - gosec
+  #   - nolintlint
+  #   - revive
+
+issues:
+  exclude-rules: []
+  max-issues-per-linter: 10000
+  max-same-issues: 10000
+
+
+
+linters-settings:
+  dogsled:
+    max-blank-identifiers: 3
+  maligned:
+    # print struct with more effective memory layout or not, false by default
+    suggest-new: true
+  nolintlint:
+    allow-unused: false
+    allow-leading-space: true
+    require-explanation: false
+    require-specific: false
