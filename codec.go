@@ -13,3 +13,5 @@ type Codec interface {
 	// Example: "application/json"
 	ContentType() string
 }
+
+//go:generate mockgen -destination=./test/mocks/codec.go -package=mocks -source=codec.go

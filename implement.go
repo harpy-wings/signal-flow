@@ -267,7 +267,8 @@ func (f *signalFlow[Message]) connNotifyBlockedHandler(b amqp.Blocking) {
 
 // connNotifyCloseHandler : handle the connection closed notification. it logs the reason and tries to retrieve the connection.
 func (f *signalFlow[Message]) connNotifyCloseHandler(e *amqp.Error) {
-	f.logger.Warnf("notification received since connection closed: %s; retrieving the connection", e.Error())
+
+	f.logger.Warnf("notification received since connection closed: %+v; retrieving the connection", e)
 	err := f.connect()
 	if err != nil {
 		f.config.errorHandler(err)
