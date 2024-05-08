@@ -22,7 +22,7 @@ const (
 
 func TestStory1(t *testing.T) {
 	// set OS environment variables
-	err := os.Setenv("DOCKER_API_VERSION", "1.44")
+	err := os.Setenv("DOCKER_API_VERSION", "1.43")
 	require.NoError(t, err)
 
 	// setup the Docker client

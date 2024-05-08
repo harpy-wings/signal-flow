@@ -3,7 +3,7 @@ run:
   timeout: 10m
   sort-results: true
   allow-parallel-runners: true
-  exclude-dir: test/testutils
+  exclude-dir: test/**
   concurrency: 4
 
 linters:
