@@ -1,14 +1,13 @@
-package codec_test
+package codec
 
 import (
 	"testing"
 
-	"github.com/harpy-wings/signal-flow/codec"
 	"github.com/stretchr/testify/require"
 )
 
 func TestJson(t *testing.T) {
-	c := codec.NewJsonCodec()
+	c := NewJsonCodec()
 	require.NotNil(t, c)
 	t.Run("success", func(t *testing.T) {
 		type testCase struct {
