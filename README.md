@@ -1,7 +1,8 @@
 # signal-flow
 [![Go Report Card](https://goreportcard.com/badge/github.com/harpy-wings/signal-flow)](https://goreportcard.com/report/github.com/harpy-wings/signal-flow)
-[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=harpy-wings_signal-flow)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=harpy-wings_signal-flow&metric=coverage)](https://sonarcloud.io/summary/new_code?id=harpy-wings_signal-flow)
+[![Go Reference](https://pkg.go.dev/badge/github.com/harpy-wings/signal-flow.svg)](https://pkg.go.dev/github.com/harpy-wings/signal-flow)
+[![build workflow](https://github.com/harpy-wings/signal-flow/actions/workflows/common.yml/badge.svg)](https://github.com/harpy-wings/signal-flow/actions)
 [![codecov](https://codecov.io/gh/harpy-wings/signal-flow/branch/main/graph/badge.svg?token=CSO8PJZ0NU)](https://codecov.io/gh/harpy-wings/signal-flow)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=harpy-wings_signal-flow&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=harpy-wings_signal-flow)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=harpy-wings_signal-flow&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=harpy-wings_signal-flow)
@@ -37,3 +38,6 @@ type SignalFlow[Message any] interface {
 	EmitR(msg Message, routingKey string) error
 }
 ```
+
+---
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=harpy-wings_signal-flow)
