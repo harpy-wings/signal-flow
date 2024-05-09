@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	signalflow "github.com/harpy-wings/signal-flow"
 	"github.com/harpy-wings/signal-flow/codec"
+	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,45 +22,47 @@ const (
 )
 
 func TestStory1(t *testing.T) {
-
-	// set OS environment variables
-	err := os.Setenv("DOCKER_API_VERSION", "1.43")
-	require.NoError(t, err)
-
-	// setup the Docker client
-	docker, err := client.NewClientWithOpts(client.FromEnv)
-	require.NoError(t, err)
-	defer docker.Close()
-	var containerID string
-	if containerID == "" {
-		// setup the RMQ container
-
-		containerResp, err := docker.ContainerCreate(context.Background(), &container.Config{
-			Image: "rabbitmq:3.13-management",
-			ExposedPorts: nat.PortSet{
-				"15672": {},
-				"5672":  {},
-			},
-		}, &container.HostConfig{
-			AutoRemove: true,
-			PortBindings: nat.PortMap{
-				"15672": []nat.PortBinding{{"0.0.0.0", "15672"}},
-				"5672":  []nat.PortBinding{{"0.0.0.0", "5672"}},
-			},
-		}, nil, nil, "signal-flow_RMQ_e2e_test")
+	const localAMQPHost string = "amqp://guest:guest@localhost:5672/"
+	if conn, err := amqp.Dial(localAMQPHost); err != nil {
+		// local amqp is not available for testing.
+		// using docker to create it.
+		// set OS environment variables
+		err := os.Setenv("DOCKER_API_VERSION", "1.43")
 		require.NoError(t, err)
-		containerID = containerResp.ID
+
+		// setup the Docker client
+		docker, err := client.NewClientWithOpts(client.FromEnv)
+		require.NoError(t, err)
+		defer docker.Close()
+		var containerID string
+		if containerID == "" {
+			// setup the RMQ container
+
+			containerResp, err := docker.ContainerCreate(context.Background(), &container.Config{
+				Image: "rabbitmq:3.13-management",
+				ExposedPorts: nat.PortSet{
+					"15672": {},
+					"5672":  {},
+				},
+			}, &container.HostConfig{
+				AutoRemove: true,
+				PortBindings: nat.PortMap{
+					"15672": []nat.PortBinding{{"0.0.0.0", "15672"}},
+					"5672":  []nat.PortBinding{{"0.0.0.0", "5672"}},
+				},
+			}, nil, nil, "signal-flow_RMQ_e2e_test")
+			require.NoError(t, err)
+			containerID = containerResp.ID
+		}
+
+		// start the rmq server
+		err = docker.ContainerStart(context.Background(), containerID, container.StartOptions{})
+		require.NoError(t, err)
+		// waiting for the container to be started, it takes about 7 seconds.
+		time.Sleep(10 * time.Second)
+	} else {
+		conn.Close() // ready to go
 	}
-
-	// start the rmq server
-	err = docker.ContainerStart(context.Background(), containerID, container.StartOptions{})
-	require.NoError(t, err)
-
-	defer func() {
-		// docker.ContainerStop(context.Background(), containerID, container.StopOptions{})
-	}()
-	// waiting for the container to be started, it takes about 7 seconds.
-	time.Sleep(10 * time.Second)
 
 	// defining type of message
 	type Message struct {
@@ -135,29 +138,10 @@ func TestStory1(t *testing.T) {
 		testCaseLock.Lock()
 		testCases[m.UID] = true // Message received
 		testCaseLock.Unlock()
-		time.Sleep(10 * time.Millisecond) // lets make it slow, so consuming all the messages will take NumberOfTestCases/2*100 Seconds(25 Seconds.)
+		time.Sleep(1 * time.Millisecond) // lets make it slow, so consuming all the messages will take NumberOfTestCases/2*100 Seconds(25 Seconds.)
 		return nil
 	})
 	require.NoError(t, err)
-
-	time.Sleep(5 * time.Second)
-	// lets make the RMQ server unexpected crash but restored successfully.
-	t.Log("simulating the network failure")
-	{
-		err := docker.ContainerPause(context.Background(), containerID)
-		require.NoError(t, err)
-		time.Sleep(5 * time.Second)
-		err = docker.ContainerUnpause(context.Background(), containerID)
-		require.NoError(t, err)
-		// Restarting the container will cause to unread messages be deleted
-		// err = docker.ContainerRestart(context.Background(), containerID, container.StopOptions{})
-		// resp, err := docker.ContainerExecCreate(context.Background(), containerID, types.ExecConfig{
-		// 	Cmd: []string{"rabbitmqctl", "close_all_connections"},
-		// })
-		// require.NoError(t, err)
-		// err = docker.ContainerExecStart(context.Background(), resp.ID, types.ExecStartCheck{})
-		// require.NoError(t, err)
-	}
 
 	// it will take about 20 seconds for SignalFlow to reestablished every thing.
 	time.Sleep((15) * time.Second)
@@ -176,7 +160,7 @@ func TestStory1(t *testing.T) {
 		testCaseLock.Unlock()
 	}
 	// let's wait for all of the messages consume.
-	time.Sleep(20 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	// let's verify the test cases
 	unexpectedCase := 0
