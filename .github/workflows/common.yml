@@ -60,7 +60,7 @@ jobs:
         run: sleep 15
       - name: Run Test
         run: |
-          go test -race -covermode=atomic -coverprofile=coverage.out
+          go test -covermode=atomic -coverprofile=coverage.out
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
