@@ -29,6 +29,12 @@ jobs:
           version: latest
   test:
     name: Test on ${{ matrix.os }}
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13-management
+        ports:
+          - 15672:15672
+          - 5672:5672
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -50,15 +56,15 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - uses: docker-practice/actions-setup-docker@master
-        timeout-minutes: 12
+      - name: Wait for node to start booting
+        run: sleep 15
       - name: Run Test
         run: |
           go test -race -covermode=atomic -coverprofile=coverage.out
-      - name: Codecov
-        uses: codecov/codecov-action@v3.1.1
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
+          token: ${{ secrets.CODECOV_TOKEN }}
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest

@@ -27,50 +27,14 @@ var (
 
 func TestMain(m *testing.M) {
 
-	// set OS environment variables
-	err := os.Setenv("DOCKER_API_VERSION", "1.43")
-	if err != nil {
-		panic(err)
+	if conn, err := amqp.Dial(localAMQPHost); err != nil {
+		// local amqp is not available for testing.
+		// using docker to create it.
+		initDockerContainer()
+	} else {
+		conn.Close() // ready to go
 	}
-
-	// setup the Docker client
-	docker, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		panic(err)
-	}
-	defer docker.Close()
-	var containerID string
-	if containerID == "" {
-		// setup the RMQ container
-
-		containerResp, err := docker.ContainerCreate(context.Background(), &container.Config{
-			Image: "rabbitmq:3.13-management",
-			ExposedPorts: nat.PortSet{
-				"15672": {},
-				"5672":  {},
-			},
-		}, &container.HostConfig{
-			AutoRemove: true,
-			PortBindings: nat.PortMap{
-				"15672": []nat.PortBinding{{"0.0.0.0", "15672"}},
-				"5672":  []nat.PortBinding{{"0.0.0.0", "5672"}},
-			},
-		}, nil, nil, "signal-flow_RMQ_e2e_test")
-		if err != nil {
-			panic(err)
-		}
-		containerID = containerResp.ID
-	}
-
-	// start the rmq server
-	err = docker.ContainerStart(context.Background(), containerID, container.StartOptions{})
-	if err != nil {
-		panic(err)
-	}
-	time.Sleep(7 * time.Second)
-	code := m.Run()
-	docker.ContainerStop(context.Background(), containerID, container.StopOptions{})
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 func TestOptionQueueDeclaration(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
@@ -321,4 +285,48 @@ func TestOptionWithErrorHandler(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func initDockerContainer() {
+	// set OS environment variables
+	err := os.Setenv("DOCKER_API_VERSION", "1.43")
+	if err != nil {
+		panic(err)
+	}
+
+	// setup the Docker client
+	docker, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		panic(err)
+	}
+	defer docker.Close()
+	var containerID string
+	if containerID == "" {
+		// setup the RMQ container
+
+		containerResp, err := docker.ContainerCreate(context.Background(), &container.Config{
+			Image: "rabbitmq:3.13-management",
+			ExposedPorts: nat.PortSet{
+				"15672": {},
+				"5672":  {},
+			},
+		}, &container.HostConfig{
+			AutoRemove: true,
+			PortBindings: nat.PortMap{
+				"15672": []nat.PortBinding{{"0.0.0.0", "15672"}},
+				"5672":  []nat.PortBinding{{"0.0.0.0", "5672"}},
+			},
+		}, nil, nil, "signal-flow_RMQ_e2e_test")
+		if err != nil {
+			panic(err)
+		}
+		containerID = containerResp.ID
+	}
+
+	// start the rmq server
+	err = docker.ContainerStart(context.Background(), containerID, container.StartOptions{})
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(7 * time.Second)
 }
