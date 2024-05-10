@@ -1,9 +1,3 @@
-<!-- < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < ☺
-v                            ✰  Thanks for opening an issue! ✰
-v    Before smashing the submit button please review the template.
-v    Please also ensure that this is not a duplicate issue :)
-☺ > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > >  -->
-
 ---
 name: Bug report
 about: Create a report to help us improve
@@ -12,6 +6,12 @@ labels: review-required
 assignees: harpy-wings
 
 ---
+
+<!-- < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < < ☺
+v                            ✰  Thanks for opening an issue! ✰
+v    Before smashing the submit button please review the template.
+v    Please also ensure that this is not a duplicate issue :)
+☺ > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > >  -->
 
 ## **Describe the bug\***
 
