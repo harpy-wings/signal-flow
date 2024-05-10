@@ -175,7 +175,6 @@ func (f *signalFlow[Message]) EmitR(msg Message, routingKey string) error {
 	if err != nil {
 		return err
 	}
-	//todo add attempts pattern for Emit
 	f.txFlow.lock.Lock()
 	err = f.amqTXChan.Publish(
 		f.config.exchangeName,
