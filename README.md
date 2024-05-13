@@ -192,6 +192,10 @@ By default, Signal-Flow does not create an exchange if it does not exist when tr
 You can bind an exchange to another exchange or queue using this option. It will be executed once the connection is established and before the consumer or producer initializes.
 > Note: You need to specify the destination type of the binding, whether it's a queue or an exchange.
 
+### `OptionWithLogger(v logrus.FieldLogger)`
+
+This option allows you to set the logger for SignalFlow. SignalFlow will then utilize this logger for logging purposes, enabling you to specify your configuration for handling logs.
+
 ## Contributing
 
 Contributions are welcome. Please read the [Contribution](https://github.com/harpy-wings/signal-flow/blob/main/README.md) document and raise an issue before starting work.

@@ -1,6 +1,9 @@
 package signalflow
 
-import "github.com/streadway/amqp"
+import (
+	"github.com/sirupsen/logrus"
+	"github.com/streadway/amqp"
+)
 
 type Option func(*signalFlow[any]) error
 
@@ -141,6 +144,15 @@ func OptionWithRoutingKey(v string) Option {
 func OptionWithErrorHandler(fn func(error)) Option {
 	return func(sf *signalFlow[any]) error {
 		sf.config.errorHandler = fn
+		return nil
+	}
+}
+
+// OptionWithLogger
+// This option allows you to set the logger for SignalFlow. SignalFlow will then utilize this logger for logging purposes, enabling you to specify your configuration for handling logs.
+func OptionWithLogger(v logrus.FieldLogger) Option {
+	return func(sf *signalFlow[any]) error {
+		sf.logger = v
 		return nil
 	}
 }
