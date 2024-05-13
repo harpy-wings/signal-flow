@@ -1,7 +1,6 @@
 module github.com/harpy-wings/signal-flow
 
-go 1.19
-
+go 1.22.1
 
 require (
 	github.com/docker/docker v26.1.1+incompatible
