@@ -7,8 +7,8 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.9.0
 )
 

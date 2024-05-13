@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	signalflow "github.com/harpy-wings/signal-flow"
 	"github.com/harpy-wings/signal-flow/codec"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 )
 

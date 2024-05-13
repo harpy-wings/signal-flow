@@ -7,12 +7,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/harpy-wings/signal-flow/test/mocks"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 )
 
 //generate dependencies
-//go:generate mockgen -destination=./test/mocks/acknowledger.go -package=mocks github.com/streadway/amqp Acknowledger
+//go:generate mockgen -destination=./test/mocks/acknowledger.go -package=mocks github.com/rabbitmq/amqp091-go Acknowledger
 
 func TestNew(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
