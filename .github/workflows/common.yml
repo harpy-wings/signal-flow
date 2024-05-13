@@ -28,7 +28,7 @@ jobs:
         with:
           version: latest
   test:
-    name: Test on ${{ matrix.os }}
+    name: "Test on ${{ matrix.os }} with Go version: ${{ matrix.go-version }}"
     services:
       rabbitmq:
         image: rabbitmq:3.13-management
