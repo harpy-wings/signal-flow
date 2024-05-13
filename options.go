@@ -148,7 +148,8 @@ func OptionWithErrorHandler(fn func(error)) Option {
 	}
 }
 
-// OptionWithLogger sets the logger for SignalFlow, it uses this logger for logging.
+// OptionWithLogger
+// This option allows you to set the logger for SignalFlow. SignalFlow will then utilize this logger for logging purposes, enabling you to specify your configuration for handling logs.
 func OptionWithLogger(v logrus.FieldLogger) Option {
 	return func(sf *signalFlow[any]) error {
 		sf.logger = v
