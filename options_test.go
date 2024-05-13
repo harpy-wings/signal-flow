@@ -330,3 +330,11 @@ func initDockerContainer() {
 	}
 	time.Sleep(7 * time.Second)
 }
+
+func TestOptionWithLogger(t *testing.T) {
+	l := logrus.New()
+	sf := &signalFlow[interface{}]{}
+	err := OptionWithLogger(l)(sf)
+	require.NoError(t, err)
+	require.NotNil(t, sf.logger)
+}
