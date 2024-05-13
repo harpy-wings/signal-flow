@@ -211,7 +211,7 @@ go test -v ./...
 ## Dependencies
 
 - [github.com/sirupsen/logrus](https://github.com/sirupsen/logrus)
-- [github.com/streadway/amqp](https://github.com/streadway/amqp)
+- [github.com/rabbitmq/amqp091-go](https://github.com/rabbitmq/amqp091-go)
 
 ### Standard Library Imports
 
