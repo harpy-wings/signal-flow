@@ -29,7 +29,7 @@ Signal-Flow is a library for handling AMQP operations, including retrying and re
 Install Signal-Flow:
 
 ```shell
-go get -u github.com/harpy-wing/signal-flow
+go get -u github.com/harpy-wings/signal-flow
 ```
 
 Then, use it in your code:
