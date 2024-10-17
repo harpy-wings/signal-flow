@@ -289,7 +289,7 @@ func TestOptionWithCodec(t *testing.T) {
 		testCodec := mocks.NewMockCodec(cont)
 		err := OptionWithCodec(testCodec)(&sf.config)
 		require.NoError(t, err)
-		require.Equal(t, testCodec, sf.codec)
+		require.Equal(t, testCodec, sf.config.codec)
 	})
 }
 
