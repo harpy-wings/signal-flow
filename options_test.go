@@ -48,7 +48,7 @@ func TestOptionQueueDeclaration(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 
-		err = OptionQueueDeclaration(QueueDeclarationRequest{Name: uuid.NewString()})(sf)
+		err = OptionQueueDeclaration(QueueDeclarationRequest{Name: uuid.NewString()})(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -67,7 +67,7 @@ func TestOptionQueueDeclaration(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 		amqChan.Close() // channel closed so it should return an error
-		err = OptionQueueDeclaration(QueueDeclarationRequest{Name: uuid.NewString()})(sf)
+		err = OptionQueueDeclaration(QueueDeclarationRequest{Name: uuid.NewString()})(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -88,7 +88,7 @@ func TestOptionExchangeDeclaration(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 
-		err = OptionExchangeDeclaration(ExchangeDeclarationRequest{Name: uuid.NewString(), Kind: "direct"})(sf)
+		err = OptionExchangeDeclaration(ExchangeDeclarationRequest{Name: uuid.NewString(), Kind: "direct"})(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -107,7 +107,7 @@ func TestOptionExchangeDeclaration(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 		amqChan.Close() // channel closed so it should return an error
-		err = OptionExchangeDeclaration(ExchangeDeclarationRequest{Name: uuid.NewString(), Kind: "direct"})(sf)
+		err = OptionExchangeDeclaration(ExchangeDeclarationRequest{Name: uuid.NewString(), Kind: "direct"})(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -139,14 +139,14 @@ func TestOptionBinding(t *testing.T) {
 		_, err = amqChan.QueueDeclare("qu_"+testKey, false, false, false, false, nil)
 		require.NoError(t, err)
 
-		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "qu_" + testKey})(sf)
+		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "qu_" + testKey})(&sf.config)
 		require.NoError(t, err)
 
-		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: BindingDestinationTypeExchange})(sf)
+		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: BindingDestinationTypeExchange})(&sf.config)
 		require.NoError(t, err)
 
 		// unsupported binding type
-		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: 3})(sf)
+		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: 3})(&sf.config)
 		require.Error(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -167,10 +167,10 @@ func TestOptionBinding(t *testing.T) {
 		testKey := uuid.NewString()
 		err = amqChan.Close()
 		require.NoError(t, err)
-		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "qu_" + testKey})(sf)
+		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "qu_" + testKey})(&sf.config)
 		require.NoError(t, err)
 
-		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: BindingDestinationTypeExchange})(sf)
+		err = OptionBinding(BindingRequest{Source: "ex_" + testKey, Destination: "ex_" + testKey + "_d", DestinationType: BindingDestinationTypeExchange})(&sf.config)
 		require.NoError(t, err)
 
 		for _, fn := range sf.config.onConnectionStabilized {
@@ -193,7 +193,7 @@ func TestOptionWithGlobalQoS(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 
-		err = OptionWithGlobalQoS(0, 0)(sf)
+		err = OptionWithGlobalQoS(0, 0)(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -212,7 +212,7 @@ func TestOptionWithGlobalQoS(t *testing.T) {
 		amqChan, err := conn.Channel()
 		require.NoError(t, err)
 		amqChan.Close() // channel closed so it should return an error
-		err = OptionWithGlobalQoS(0, 0)(sf)
+		err = OptionWithGlobalQoS(0, 0)(&sf.config)
 		require.NoError(t, err)
 		for _, fn := range sf.config.onConnectionStabilized {
 			err = fn(amqChan)
@@ -225,7 +225,7 @@ func TestOptionWithGlobalQoS(t *testing.T) {
 func TestOptionWithQueueName(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithQueueName("TestOptionWithQueueName")(sf)
+		err := OptionWithQueueName("TestOptionWithQueueName")(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, "TestOptionWithQueueName", sf.config.queueName)
 	})
@@ -234,7 +234,7 @@ func TestOptionWithQueueName(t *testing.T) {
 func TestOptionWithExchangeName(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithExchangeName("TestOptionWithExchangeName")(sf)
+		err := OptionWithExchangeName("TestOptionWithExchangeName")(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, "TestOptionWithExchangeName", sf.config.exchangeName)
 	})
@@ -243,7 +243,7 @@ func TestOptionWithExchangeName(t *testing.T) {
 func TestOptionWithHost(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithHost("TestOptionWithHost")(sf)
+		err := OptionWithHost("TestOptionWithHost")(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, "TestOptionWithHost", sf.config.host)
 	})
@@ -252,7 +252,7 @@ func TestOptionWithHost(t *testing.T) {
 func TestOptionWithName(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithName("TestOptionWithName")(sf)
+		err := OptionWithName("TestOptionWithName")(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, "TestOptionWithName", sf.config.name)
 	})
@@ -263,7 +263,7 @@ func TestOptionWithCodec(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
 		cont := gomock.NewController(t)
 		testCodec := mocks.NewMockCodec(cont)
-		err := OptionWithCodec(testCodec)(sf)
+		err := OptionWithCodec(testCodec)(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, testCodec, sf.codec)
 	})
@@ -272,7 +272,7 @@ func TestOptionWithCodec(t *testing.T) {
 func TestOptionWithRoutingKey(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithRoutingKey("TestOptionWithRoutingKey")(sf)
+		err := OptionWithRoutingKey("TestOptionWithRoutingKey")(&sf.config)
 		require.NoError(t, err)
 		require.Equal(t, "TestOptionWithRoutingKey", sf.config.routingKey)
 	})
@@ -281,7 +281,7 @@ func TestOptionWithRoutingKey(t *testing.T) {
 func TestOptionWithErrorHandler(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{}
-		err := OptionWithErrorHandler(func(err error) {})(sf)
+		err := OptionWithErrorHandler(func(err error) {})(&sf.config)
 		require.NoError(t, err)
 	})
 
@@ -334,7 +334,7 @@ func initDockerContainer() {
 func TestOptionWithLogger(t *testing.T) {
 	l := logrus.New()
 	sf := &signalFlow[interface{}]{}
-	err := OptionWithLogger(l)(sf)
+	err := OptionWithLogger(l)(&sf.config)
 	require.NoError(t, err)
 	require.NotNil(t, sf.logger)
 }
