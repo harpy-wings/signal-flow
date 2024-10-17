@@ -360,5 +360,5 @@ func TestOptionWithLogger(t *testing.T) {
 	sf := &signalFlow[interface{}]{}
 	err := OptionWithLogger(l)(&sf.config)
 	require.NoError(t, err)
-	require.NotNil(t, sf.logger)
+	require.NotNil(t, sf.config.logger)
 }
