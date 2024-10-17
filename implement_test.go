@@ -16,8 +16,8 @@ import (
 
 func TestNew(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithQueueName("q_test"), OptionWithExchangeName("ex_test"), func(sf *signalFlow[any]) error {
-			sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithQueueName("q_test"), OptionWithExchangeName("ex_test"), func(sfc *config) error {
+			sfc.onConnectionStabilized = append(sfc.onConnectionStabilized, func(channel *amqp.Channel) error {
 				_, err := channel.QueueDeclare("q_test", false, false, false, false, nil)
 				if err != nil {
 					return err
@@ -54,19 +54,19 @@ func TestNew(t *testing.T) {
 
 	t.Run("failure", func(t *testing.T) {
 		t.Run("connect", func(t *testing.T) {
-			SF, err := New[interface{}](OptionWithHost("amqp://guest:guest@localhost:2765/"), func(sf *signalFlow[any]) error { sf.config.amqAttemptsLimit = 1; return nil })
+			SF, err := New[interface{}](OptionWithHost("amqp://guest:guest@localhost:2765/"), func(sfc *config) error { sfc.amqAttemptsLimit = 1; return nil })
 			require.Error(t, err)
 			require.Nil(t, SF)
 		})
 		t.Run("options", func(t *testing.T) {
-			SF, err := New[interface{}](func(sf *signalFlow[any]) error { return errors.New("any") })
+			SF, err := New[interface{}](func(sfc *config) error { return errors.New("any") })
 			require.Error(t, err)
 			require.Nil(t, SF)
 		})
 
 		t.Run("init", func(t *testing.T) {
-			SF, err := New[interface{}](OptionWithHost(localAMQPHost), func(sf *signalFlow[any]) error {
-				sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+			SF, err := New[interface{}](OptionWithHost(localAMQPHost), func(sfc *config) error {
+				sfc.onConnectionStabilized = append(sfc.onConnectionStabilized, func(channel *amqp.Channel) error {
 					return errors.New("any")
 				})
 				return nil
@@ -80,8 +80,8 @@ func TestNew(t *testing.T) {
 
 func TestEmit(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithExchangeName("ex_test"), func(sf *signalFlow[any]) error {
-			sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithExchangeName("ex_test"), func(sfc *config) error {
+			sfc.onConnectionStabilized = append(sfc.onConnectionStabilized, func(channel *amqp.Channel) error {
 				err := channel.ExchangeDeclare("ex_test", "fanout", false, false, false, false, nil)
 				if err != nil {
 					return err
@@ -122,8 +122,8 @@ func TestEmit(t *testing.T) {
 
 	t.Run("failure", func(t *testing.T) {
 		t.Run("codec failure", func(t *testing.T) {
-			SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithExchangeName("ex_test"), func(sf *signalFlow[any]) error {
-				sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+			SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithExchangeName("ex_test"), func(sfc *config) error {
+				sfc.onConnectionStabilized = append(sfc.onConnectionStabilized, func(channel *amqp.Channel) error {
 					err := channel.ExchangeDeclare("ex_test", "fanout", false, false, false, false, nil)
 					if err != nil {
 						return err
@@ -163,8 +163,8 @@ func TestEmit(t *testing.T) {
 func TestForeach(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
-		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithQueueName("q_test"), func(sf *signalFlow[any]) error {
-			sf.config.onConnectionStabilized = append(sf.config.onConnectionStabilized, func(channel *amqp.Channel) error {
+		SF, err := New[interface{}](OptionWithHost(localAMQPHost), OptionWithQueueName("q_test"), func(sfc *config) error {
+			sfc.onConnectionStabilized = append(sfc.onConnectionStabilized, func(channel *amqp.Channel) error {
 				_, err := channel.QueueDeclare("q_test", false, false, false, false, nil)
 				if err != nil {
 					return err

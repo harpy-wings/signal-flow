@@ -23,6 +23,7 @@ type signalFlow[Message any] struct {
 
 	amqRXChan *amqp.Channel
 	rxFlow    struct {
+		fn            func(Message) error
 		lock          sync.Mutex
 		channelClosed chan *amqp.Error
 	}
@@ -44,40 +45,22 @@ type signalFlow[Message any] struct {
 	amqProducerAttempts int
 	amqConnAttempts     int
 
-	config struct {
-		host                      string                 // RMQ host.
-		name                      string                 // Name of the consumer. By default, a random number with "sg_" prefix.
-		queueName                 string                 // Queue name for the consumer to consume messages.
-		exchangeName              string                 // Exchange name where the producer will push messages.
-		routingKey                string                 // Routing key for the producer to emit messages into the exchange.
-		exclusive                 bool                   // Whether the consumer should be exclusive or not. Default is false.
-		flowControlBufferSize     int                    // Buffer size of channel for flow control purposes. Default is 1.
-		amqAttemptsLimit          int                    // Attempts limit for retrying.
-		priority                  uint8                  // Default is 0; range is 0 to 9.
-		mandatory                 bool                   // Default is false.
-		immediate                 bool                   // Default is false.
-		args                      map[string]interface{} // Default arguments passed to RMQ server in every request.
-		errorHandler              func(error)            // Function called to handle asynchronous errors.
-		numberOfGoRoutinesForeach int
-		onConnectionStabilized    []func(channel *amqp.Channel) error
-		ackTimeout                time.Duration
-	}
+	config config
 }
 
 var _ SignalFlow[interface{}] = &signalFlow[interface{}]{}
 
 func New[Message any](ops ...Option) (SignalFlow[Message], error) {
-	factoryS := new(signalFlow[any])
+	s := new(signalFlow[Message])
 	var err error
 
-	factoryS.setDefaults()
+	s.setDefaults()
 	for _, fn := range ops {
-		err = fn(factoryS)
+		err = fn(&s.config)
 		if err != nil {
 			return nil, err
 		}
 	}
-	s := (*signalFlow[Message])(factoryS)
 	err = s.init()
 	if err != nil {
 		return nil, err
@@ -95,6 +78,7 @@ func (f *signalFlow[Message]) setDefaults() {
 		defaultLogger := logrus.StandardLogger()
 		defaultLogger.SetLevel(logrus.DebugLevel)
 		f.logger = defaultLogger
+		f.config.logger = defaultLogger
 	}
 	f.config.errorHandler = func(err error) {
 		f.logger.Error(err)
@@ -102,6 +86,14 @@ func (f *signalFlow[Message]) setDefaults() {
 }
 
 func (f *signalFlow[Message]) init() error {
+	// overwrite the logger and codec
+	{
+		f.logger = f.config.logger
+		if f.config.codec != nil {
+			f.codec = f.config.codec
+		}
+	}
+
 	var err error
 	err = f.connect()
 	if err != nil {
@@ -147,6 +139,7 @@ func (f *signalFlow[Message]) init() error {
 // ForeachN is bounded parallelism pattern, it executes the `fn` function for each message in `n` goroutines. Acks the RMQ if and only if the `fn` returns nil.
 func (f *signalFlow[Message]) Foreach(fn func(Message) error) error {
 	// Preconditions
+	// f
 	if f.rxc == nil {
 		return ErrNilChannel
 	}
@@ -328,8 +321,10 @@ func (f *signalFlow[Message]) consume() error {
 	go f.channelNotifyClosed(f.rxFlow.channelClosed, f.consume)
 	// f.rxFlow.chanForeachNRecover <- struct{}{} //
 	go f.rxcProxy(RXC)
-
 	f.logger.Infof("%s consumer stabilized for queue %s.", f.config.name, f.config.queueName)
+	if f.rxFlow.fn != nil {
+		return f.Foreach(f.rxFlow.fn)
+	}
 	return nil
 }
 

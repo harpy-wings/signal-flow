@@ -10,6 +10,7 @@ import (
 
 func main() {
 	type Telegraph struct {
+		Age  int
 		Text string `json:"text"`
 	}
 
@@ -26,6 +27,7 @@ func main() {
 
 	SF.Foreach(func(m Telegraph) error {
 		log.Println(m)
+		m.Text
 		return nil
 	})
 
