@@ -78,6 +78,7 @@ func (f *signalFlow[Message]) setDefaults() {
 		defaultLogger := logrus.StandardLogger()
 		defaultLogger.SetLevel(logrus.DebugLevel)
 		f.logger = defaultLogger
+		f.config.logger = defaultLogger
 	}
 	f.config.errorHandler = func(err error) {
 		f.logger.Error(err)
@@ -85,6 +86,14 @@ func (f *signalFlow[Message]) setDefaults() {
 }
 
 func (f *signalFlow[Message]) init() error {
+	// overwrite the logger and codec
+	{
+		f.logger = f.config.logger
+		if f.config.codec != nil {
+			f.codec = f.config.codec
+		}
+	}
+
 	var err error
 	err = f.connect()
 	if err != nil {
@@ -313,6 +322,9 @@ func (f *signalFlow[Message]) consume() error {
 	// f.rxFlow.chanForeachNRecover <- struct{}{} //
 	go f.rxcProxy(RXC)
 	f.logger.Infof("%s consumer stabilized for queue %s.", f.config.name, f.config.queueName)
+	if f.rxFlow.fn != nil {
+		return f.Foreach(f.rxFlow.fn)
+	}
 	return nil
 }
 
