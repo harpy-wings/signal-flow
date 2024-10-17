@@ -40,6 +40,9 @@ func TestOptionQueueDeclaration(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -59,6 +62,9 @@ func TestOptionQueueDeclaration(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -81,6 +87,9 @@ func TestOptionExchangeDeclaration(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -99,6 +108,9 @@ func TestOptionExchangeDeclaration(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -121,6 +133,9 @@ func TestOptionBinding(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -157,6 +172,9 @@ func TestOptionBinding(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -185,6 +203,9 @@ func TestOptionWithGlobalQoS(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
@@ -204,6 +225,9 @@ func TestOptionWithGlobalQoS(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		sf := &signalFlow[interface{}]{
 			logger: testLogger,
+			config: config{
+				logger: testLogger,
+			},
 		}
 		conn, err := amqp.Dial(localAMQPHost)
 		require.NoError(t, err)
